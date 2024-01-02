@@ -8,17 +8,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $userData = explode(' ', $userInput);
 
     if (count($userData) >= 1) {
-        $nama = transformUppercase(implode(' ', array_slice($userData, 0, -1)));
-        $usia = transformAge($userInput);
-        $kota = transformUppercase(end($userData));
+        $name = '';
+        $age = '';
+        $city = '';
+        $isAge = false;
+
+        foreach ($userData as $element) {
+            if (is_numeric($element)) {
+                // Jika elemen berupa angka, set isAge menjadi true
+                $isAge = true;
+                // Masukkan elemen ke age
+                $age .= $element . ' ';
+            } elseif ($isAge) {
+                // Jika isAge true, masukkan elemen ke city
+                $city .= $element . ' ';
+            } else {
+                // Jika isAge false, masukkan elemen ke name
+                $name .= $element . ' ';
+            }
+        }
+
+        // Hapus spasi ekstra di akhir string
+        $name = rtrim($name);
+        $age = rtrim($age);
+        $city = rtrim($city);
 
         if (!$saveData) {
-            simpanKeDatabase($nama, $usia, $kota);
+            // Transformasi uppercase sesuai kebutuhan
+            $name = transformUppercase($name);
+            $age = transformAge($age);
+            $city = transformUppercase($city);
+
+            // Simpan ke database
+            simpanKeDatabase($name, $age, $city);
+
             $saveData = true;
 
+            // Set session untuk memberikan pesan sukses
             session_start();
             $_SESSION['success_message'] = "Data berhasil disimpan ke database.";
 
+            // Kembalikan ke halaman index.php
             header("Location: index.php");
             exit();
         }
@@ -30,12 +60,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $userData = explode(' ', $userInput);
 
     if (count($userData) >= 1) {
-        $nama = transformUppercase(implode(' ', array_slice($userData, 0, -1)));
-        $usia = transformAge($userInput);
-        $kota = transformUppercase(end($userData));
+        $name = '';
+        $age = '';
+        $city = '';
+        $isAge = false;
+
+        foreach ($userData as $element) {
+            if (is_numeric($element)) {
+                $isAge = true;
+                $age .= $element . ' ';
+            } elseif ($isAge) {
+                $city .= $element . ' ';
+            } else {
+                $name .= $element . ' ';
+            }
+        }
+
+        $name = rtrim($name);
+        $age = rtrim($age);
+        $city = rtrim($city);
 
         if (!$saveData) {
-            simpanKeDatabase($nama, $usia, $kota);
+            $name = transformUppercase($name);
+            $age = transformAge($age);
+            $city = transformUppercase($city);
+
+            simpanKeDatabase($name, $age, $city);
+
             $saveData = true;
 
             session_start();
@@ -49,30 +100,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-function transformAge($userInput) {
-    global $angka, $tahunKeywords;
-
-    foreach ($angka as $digit) {
-        $containsAngka = strpos($userInput, $digit) !== false;
-
-        if ($containsAngka) {
-            return (int) preg_replace('/\D/', '', $userInput);
-        }
-    }
-
-    return null;
+function transformAge($usiaString) {
+    // Mengambil hanya angka dari string usia
+    $usia = (int) preg_replace('/\D/', '', $usiaString);
+    return $usia;
 }
 
 function transformUppercase($string) {
-    global $angka, $tahunKeywords;
-
-    $nameWithoutNum = str_replace($angka, '', $string);
-    $nameWithoutTahun = str_ireplace($tahunKeywords, '', $nameWithoutNum);
-
-    return strtoupper($nameWithoutTahun);
+    return strtoupper($string);
 }
 
-function simpanKeDatabase($nama, $usia, $kota) {
+function simpanKeDatabase($name, $age, $city) {
+    global $tahunKeywords;
+
+    // Hapus kata yang ada di tahunKeywords dari city
+    $city = str_ireplace($tahunKeywords, '', $city);
+
     $host = "localhost";
     $username = "root";
     $password = "";
@@ -87,11 +130,12 @@ function simpanKeDatabase($nama, $usia, $kota) {
     $insertQuery = "INSERT INTO user_data (name, age, city) VALUES (?, ?, ?)";
     $saveToDB = $conn->prepare($insertQuery);
 
-    $saveToDB->bind_param("sis", $nama, $usia, $kota);
+    $saveToDB->bind_param("sis", $name, $age, $city);
 
     $saveToDB->execute();
 
     $saveToDB->close();
     $conn->close();
 }
+
 ?>
